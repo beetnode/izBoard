@@ -19,21 +19,41 @@ on:
     outputs:
       image:
         description: Component image reference the application installs, pinned by digest when pushed
-        value: ${{ jobs.build.outputs.image }}
+        value: ${{ jobs.merge.outputs.image }}
 
 jobs:
-  build:
+  # Each platform builds on a runner of its own architecture, so nothing runs under emulation.
+  platforms:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - id: matrix
+        env:
+          PLATFORMS: ${{ inputs.platforms }}
+        run: |
+          matrix=$(jq -cn --arg platforms "$PLATFORMS" '
+            $platforms | split(",") | map(gsub("\\s"; "")) | map(select(length > 0)) | map({
+              platform: .,
+              arch: (split("/")[1]),
+              runner: (if . == "linux/amd64" then "ubuntu-latest"
+                       elif . == "linux/arm64" then "ubuntu-24.04-arm"
+                       else error("Unsupported platform: \(.)") end)
+            }) | {include: .}')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: platforms
+    strategy:
+      matrix: ${{ fromJSON(needs.platforms.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
-    outputs:
-      image: ${{ steps.reference.outputs.image }}
     env:
       IMAGE: izdevdigital/izboard-rendering
       PUSH: ${{ github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - name: Log in to Docker Hub
         if: env.PUSH == 'true'
@@ -46,8 +66,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE }}
-          tags: type=raw,value=${{ inputs.image_tag }}
       # The application downloads the single gzip layer of its platform through the registry API.
+      # Platform images are pushed by digest only; the merge job tags the multi-architecture index.
       - name: Build and push component image
         id: build
         uses: docker/build-push-action@v6
@@ -55,22 +75,68 @@ jobs:
           context: ./software
           file: ./software/EPaperDashboard.PlaywrightComponent/Dockerfile
           target: image
-          platforms: ${{ inputs.platforms }}
+          platforms: ${{ matrix.platform }}
           build-args: VERSION=${{ inputs.version }}
-          tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
-          outputs: type=image,push=${{ env.PUSH }},oci-mediatypes=true,compression=gzip,force-compression=true
-          cache-from: type=gha,scope=rendering-component
-          cache-to: type=gha,mode=max,scope=rendering-component
-      - name: Resolve component image reference
-        id: reference
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=${{ env.PUSH }},oci-mediatypes=true,compression=gzip,force-compression=true
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.arch }}
+          cache-to: ${{ env.PUSH == 'true' && format('type=registry,ref={0}:buildcache-{1},mode=max,image-manifest=true,oci-mediatypes=true', env.IMAGE, matrix.arch) || '' }}
+      - name: Export digest
+        if: env.PUSH == 'true'
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
-          TAG: ${{ inputs.image_tag }}
+        run: |
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "Missing image digest" >&2; exit 1; }
+          mkdir -p "$RUNNER_TEMP/digests"
+          touch "$RUNNER_TEMP/digests/${DIGEST#sha256:}"
+      - name: Upload digest
+        if: env.PUSH == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendering-component-digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      image: ${{ steps.reference.outputs.image }}
+    env:
+      IMAGE: izdevdigital/izboard-rendering
+      PUSH: ${{ github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v') }}
+      TAG: ${{ inputs.image_tag }}
+    steps:
+      - name: Download digests
+        if: env.PUSH == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rendering-component-digest-*
+          path: ${{ runner.temp }}/digests
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v3
+        if: env.PUSH == 'true'
+      - name: Log in to Docker Hub
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Create multi-architecture image
+        if: env.PUSH == 'true'
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create -t "$IMAGE:$TAG" $(printf "$IMAGE@sha256:%s " *)
+      - name: Resolve component image reference
+        id: reference
         run: |
           if [ "$PUSH" = "true" ]; then
-            [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "Missing image digest" >&2; exit 1; }
-            echo "image=$IMAGE@$DIGEST" >> "$GITHUB_OUTPUT"
+            digest=$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{json .Manifest}}' | jq -r .digest)
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "Missing image digest" >&2; exit 1; }
+            echo "image=$IMAGE@$digest" >> "$GITHUB_OUTPUT"
           else
             # Unpushed builds (pull requests) cannot pin a digest; the tag is only used if such an image is run.
             echo "image=$IMAGE:$TAG" >> "$GITHUB_OUTPUT"

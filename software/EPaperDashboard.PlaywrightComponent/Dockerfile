@@ -2,7 +2,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS component
 
 ARG TARGETARCH
-ARG VERSION=0.0.0
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PLAYWRIGHT_BROWSERS_PATH=/component/browsers
 
@@ -21,12 +20,15 @@ RUN case "$TARGETARCH" in \
     esac && \
     dotnet publish EPaperDashboard.PlaywrightComponent/EPaperDashboard.PlaywrightComponent.csproj \
       -c Release -r "$RID" --self-contained false -o /component/worker \
-      /p:Version="$VERSION" /p:DebugType=none /p:DebugSymbols=false
+      /p:DebugType=none /p:DebugSymbols=false
 
 # Install the browser and its dependencies only in this packaging stage. The collector copies
 # the required native libraries into the downloadable component; none enter the base image.
 RUN pwsh /component/worker/playwright.ps1 install --with-deps --only-shell chromium
 RUN bash /src/packaging/collect-native-libraries.sh /component
+# The version changes with every commit, so it only stamps the manifest; the worker does not read
+# its assembly version, and keeping it out of the steps above lets them be reused between builds.
+ARG VERSION=0.0.0
 RUN case "$TARGETARCH" in \
       amd64) COMPONENT_RUNTIME=linux-x64 ;; \
       arm64) COMPONENT_RUNTIME=linux-arm64 ;; \
