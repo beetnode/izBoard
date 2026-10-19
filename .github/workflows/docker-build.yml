@@ -72,7 +72,7 @@ jobs:
         id: metadata
         uses: docker/metadata-action@v5
         with:
-          images: izdevdigital/e-paper-dashboard
+          images: izdevdigital/izboard
           tags: type=raw,value=${{ inputs.is_release && needs.version.outputs.base_version || 'latest' }}
       - name: Build and push Docker image
         uses: docker/build-push-action@v6

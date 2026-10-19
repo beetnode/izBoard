@@ -28,7 +28,7 @@ The release workflow automatically:
 - Builds all artifacts (firmware, Docker images, STL files)
 - Creates the `v<version>` GitHub release with the rendering component attached before the application images are pushed, so images never point at a missing component
 - Completes that release with the firmware, STL files and release notes, and marks it latest
-- Pushes `izdevdigital/e-paper-dashboard` and `izdevdigital/izboard-addon` images to Docker Hub
+- Pushes `izdevdigital/izboard` and `izdevdigital/izboard-addon` images to Docker Hub
 
 ## Build Numbers
 
@@ -54,8 +54,8 @@ Pull request builds count the temporary merge commit GitHub creates for the PR, 
 
 ### Docker Images
 ```bash
-docker pull izdevdigital/e-paper-dashboard:0.5.0
-docker pull izdevdigital/e-paper-dashboard:latest
+docker pull izdevdigital/izboard:0.5.0
+docker pull izdevdigital/izboard:latest
 docker pull izdevdigital/izboard-addon:0.5.0
 ```
 

@@ -35,7 +35,7 @@ contains no credentials and is used by the renderer deployment and manual test c
 ```yaml
 services:
   app:
-    image: izdevdigital/e-paper-dashboard:<tag>
+    image: izdevdigital/izboard:<tag>
     ports:
       - "<port>:8128"   # Web UI and API
       - "<device-port>:8129"   # Device communication (TLS)
@@ -277,7 +277,7 @@ docker compose -f docker-compose.base.yml -f docker-compose.rendering.yml down -
 
 ```shell
 # <arch> can be: amd64 or arm64
-docker build --platform linux/<arch> --build-arg VERSION=<version> -t izdevdigital/e-paper-dashboard:<version>-<arch> -f EPaperDashboard/Dockerfile .
+docker build --platform linux/<arch> --build-arg VERSION=<version> -t izdevdigital/izboard:<version>-<arch> -f EPaperDashboard/Dockerfile .
 ```
 
 ### Multi-Architecture Build
@@ -292,8 +292,8 @@ docker buildx create --name multiarch --use
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
   --build-arg VERSION=<version> \
-  -t izdevdigital/e-paper-dashboard:<version> \
-  -t izdevdigital/e-paper-dashboard:latest \
+  -t izdevdigital/izboard:<version> \
+  -t izdevdigital/izboard:latest \
   -f EPaperDashboard/Dockerfile \
   --push .
 ```

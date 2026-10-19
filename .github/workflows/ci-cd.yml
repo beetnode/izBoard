@@ -189,13 +189,13 @@ jobs:
 
             ```bash
             # Latest development build
-            docker pull izdevdigital/e-paper-dashboard:latest
+            docker pull izdevdigital/izboard:latest
             ```
 
             The optional rendering component is installed from the app (**Settings → Rendering**) using the
             multi-architecture image `izdevdigital/izboard-rendering:latest`.
             
-            [View on Docker Hub](https://hub.docker.com/r/izdevdigital/e-paper-dashboard)
+            [View on Docker Hub](https://hub.docker.com/r/izdevdigital/izboard)
             
             ---
             
