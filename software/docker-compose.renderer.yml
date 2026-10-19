@@ -1,6 +1,6 @@
 services:
   app:
-    image: ${IZBOARD_APP_IMAGE:-izdevdigital/e-paper-dashboard:latest}
+    image: ${IZBOARD_APP_IMAGE:-izdevdigital/izboard:latest}
     environment:
       RENDERING_COMPONENT_SOCKET: /run/izboard-rendering/renderer.sock
       RENDERING_MAX_CONCURRENT_RENDERS: ${RENDERING_MAX_CONCURRENT_RENDERS:-2}
@@ -15,7 +15,7 @@ services:
   # Initialize the existing data volume before mounting only its components subdirectory.
   # This preserves already-installed components without exposing app data to the renderer.
   rendering-storage:
-    image: ${IZBOARD_APP_IMAGE:-izdevdigital/e-paper-dashboard:latest}
+    image: ${IZBOARD_APP_IMAGE:-izdevdigital/izboard:latest}
     command: ["/bin/sh", "-ec", "mkdir -p /data/components"]
     user: app
     restart: "no"
@@ -24,7 +24,7 @@ services:
       - appdata:/data
 
   renderer:
-    image: ${IZBOARD_APP_IMAGE:-izdevdigital/e-paper-dashboard:latest}
+    image: ${IZBOARD_APP_IMAGE:-izdevdigital/izboard:latest}
     command: ["dotnet", "EPaperDashboard.dll", "--rendering-host"]
     user: app
     init: true

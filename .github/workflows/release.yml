@@ -102,10 +102,10 @@ jobs:
         ## Docker Image
         
         ```bash
-        docker pull izdevdigital/e-paper-dashboard:${{ steps.tag.outputs.version }}
+        docker pull izdevdigital/izboard:${{ steps.tag.outputs.version }}
         ```
         
-        [View on Docker Hub](https://hub.docker.com/r/izdevdigital/e-paper-dashboard)
+        [View on Docker Hub](https://hub.docker.com/r/izdevdigital/izboard)
         
         Home Assistant add-on image: `izdevdigital/izboard-addon:${{ steps.tag.outputs.version }}`
 
@@ -142,7 +142,7 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "#### Artifacts:" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Firmware (ESP32) — attached as firmware.zip and standalone signed firmware.bin + .sig for OTA" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Docker Image: \`izdevdigital/e-paper-dashboard:${{ steps.tag.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Docker Image: \`izdevdigital/izboard:${{ steps.tag.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Add-on Image: \`izdevdigital/izboard-addon:${{ steps.tag.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Rendering component image: \`izdevdigital/izboard-rendering:${{ steps.tag.outputs.version }}\` (amd64 + arm64)" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ 3D Models (STL) — attached as release/stl.zip" >> $GITHUB_STEP_SUMMARY
@@ -150,4 +150,4 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "#### Links:" >> $GITHUB_STEP_SUMMARY
         echo "- 🔗 [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.tag }})" >> $GITHUB_STEP_SUMMARY
-        echo "- 🐳 [Docker Hub](https://hub.docker.com/r/izdevdigital/e-paper-dashboard)" >> $GITHUB_STEP_SUMMARY
+        echo "- 🐳 [Docker Hub](https://hub.docker.com/r/izdevdigital/izboard)" >> $GITHUB_STEP_SUMMARY

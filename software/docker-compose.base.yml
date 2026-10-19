@@ -1,6 +1,6 @@
 services:
   app:
-    image: ${IZBOARD_APP_IMAGE:-izdevdigital/e-paper-dashboard:latest}
+    image: ${IZBOARD_APP_IMAGE:-izdevdigital/izboard:latest}
     restart: unless-stopped
     ports:
       - "${IZBOARD_WEB_PORT:-8128}:8128"
