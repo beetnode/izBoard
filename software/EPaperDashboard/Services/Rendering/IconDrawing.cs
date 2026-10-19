@@ -17,10 +17,21 @@ public static class IconDrawing
     {
         if (bounds.Width <= 0 || bounds.Height <= 0) return;
 
+        // Geometry matches icon-tab.svg: 370-unit viewBox, tile block spans x 20..350, y 20..324,
+        // separated by 12-unit gaps. The block is centred vertically (the SVG uses viewBox min-y -13).
         const float vb = 370f;
+        const float yShift = 13f;
+        const float gap = 12f;
         var scale = Math.Min(bounds.Width / vb, bounds.Height / vb);
         var ox = bounds.X + (bounds.Width - vb * scale) / 2f;
-        var oy = bounds.Y + (bounds.Height - vb * scale) / 2f;
+        var oy = bounds.Y + (bounds.Height - vb * scale) / 2f + yShift * scale;
+
+        // Tile edges are snapped to whole pixels so gaps stay crisp, and an edge that follows a
+        // gap is pushed at least one pixel past the previous tile so small icons keep their spacing.
+        float SnapX(float v) => MathF.Round(v * scale + ox);
+        float SnapY(float v) => MathF.Round(v * scale + oy);
+        float LeadX(float v) => Math.Max(SnapX(v), SnapX(v - gap) + 1);
+        float LeadY(float v) => Math.Max(SnapY(v), SnapY(v - gap) + 1);
 
         var p = accentColor.ToPixel<Rgba32>();
         var darkest  = new Color(new Rgba32((byte)(p.R * 0.3f), (byte)(p.G * 0.3f), (byte)(p.B * 0.3f), p.A));
@@ -42,25 +53,28 @@ public static class IconDrawing
 
         foreach (var (rx, ry, rw, rh, rrx, color) in rects)
         {
-            var x1 = rx * scale + ox;
-            var y1 = ry * scale + oy;
-            var w1 = rw * scale;
-            var h1 = rh * scale;
+            var x1 = LeadX(rx);
+            var y1 = LeadY(ry);
+            var w1 = SnapX(rx + rw) - x1;
+            var h1 = SnapY(ry + rh) - y1;
+            if (w1 <= 0 || h1 <= 0) continue;
+            // Sub-pixel corner radii only blur the corners, so BuildRoundedRect keeps them sharp.
             var cr = Math.Min(rrx * scale, Math.Min(w1, h1) / 2f);
             image.Mutate(ctx => ctx.Fill(color, BuildRoundedRect(x1, y1, w1, h1, cr)));
         }
 
+        float top = LeadY(128), bottom = SnapY(224);
         PointF[] leftPoly = [
-            new(122 * scale + ox, 128 * scale + oy),
-            new(256 * scale + ox, 128 * scale + oy),
-            new(206 * scale + ox, 224 * scale + oy),
-            new(122 * scale + ox, 224 * scale + oy),
+            new(LeadX(122), top),
+            new(SnapX(256), top),
+            new(SnapX(206), bottom),
+            new(LeadX(122), bottom),
         ];
         PointF[] rightPoly = [
-            new(268 * scale + ox, 128 * scale + oy),
-            new(350 * scale + ox, 128 * scale + oy),
-            new(350 * scale + ox, 224 * scale + oy),
-            new(218 * scale + ox, 224 * scale + oy),
+            new(LeadX(268), top),
+            new(SnapX(350), top),
+            new(SnapX(350), bottom),
+            new(LeadX(218), bottom),
         ];
 
         image.Mutate(ctx =>

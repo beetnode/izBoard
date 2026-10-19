@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 370 370">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -13 370 370">
+  <!-- min-y -13 centres the tile block (y 20..324) vertically; IconDrawing.DrawAppIcon mirrors this. -->
   <style>
     /* CSS custom properties for accent color variations */
     :root {
