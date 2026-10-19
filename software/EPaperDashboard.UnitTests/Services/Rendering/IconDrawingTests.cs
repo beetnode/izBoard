@@ -108,6 +108,61 @@ public class IconDrawingTests
         (size - 1 - right - left).Should().BeInRange(-1, 1);
     }
 
+    [Theory]
+    [InlineData(16)]
+    [InlineData(32)]
+    [InlineData(64)]
+    [InlineData(100)]
+    [InlineData(128)]
+    [InlineData(256)]
+    public void AppIconLayout_NeighbouringTiles_AreAllExactlyOneGapApart(int size)
+    {
+        var shapes = IconDrawing.AppIconLayout(new RectangleF(0, 0, size, size));
+        var gap = Math.Max(1f, MathF.Round(12f * size / 370f));
+
+        var distances = new List<float>();
+        for (var i = 0; i < shapes.Count; i++)
+            for (var j = i + 1; j < shapes.Count; j++)
+                distances.Add(Distance(shapes[i].Points, shapes[j].Points));
+
+        // Tiles touching only corner to corner are about 1.4 gaps apart; everything else is a neighbour.
+        var neighbours = distances.Where(d => d < gap * 1.3f).ToList();
+        neighbours.Should().HaveCount(11);
+        neighbours.Should().AllSatisfy(d => d.Should().BeApproximately(gap, 0.01f));
+    }
+
+    [Theory]
+    [InlineData(16)]
+    [InlineData(64)]
+    [InlineData(128)]
+    public void AppIconLayout_RectangularTiles_HaveWholePixelEdges(int size)
+    {
+        var shapes = IconDrawing.AppIconLayout(new RectangleF(0, 0, size, size));
+
+        foreach (var point in shapes.Where(s => s.Rounded).SelectMany(s => s.Points))
+        {
+            point.X.Should().Be(MathF.Round(point.X));
+            point.Y.Should().Be(MathF.Round(point.Y));
+        }
+    }
+
+    // Shortest distance between two non-overlapping convex polygons.
+    private static float Distance(PointF[] a, PointF[] b) =>
+        Math.Min(a.Min(p => DistanceToPolygon(p, b)), b.Min(p => DistanceToPolygon(p, a)));
+
+    private static float DistanceToPolygon(PointF p, PointF[] polygon) =>
+        polygon.Select((start, i) => DistanceToSegment(p, start, polygon[(i + 1) % polygon.Length])).Min();
+
+    private static float DistanceToSegment(PointF p, PointF a, PointF b)
+    {
+        var dx = b.X - a.X;
+        var dy = b.Y - a.Y;
+        var t = Math.Clamp(((p.X - a.X) * dx + (p.Y - a.Y) * dy) / (dx * dx + dy * dy), 0f, 1f);
+        var x = a.X + t * dx - p.X;
+        var y = a.Y + t * dy - p.Y;
+        return MathF.Sqrt(x * x + y * y);
+    }
+
     private static Image<Rgba32> RenderAppIcon(int size)
     {
         var image = new Image<Rgba32>(size, size, Color.White);
