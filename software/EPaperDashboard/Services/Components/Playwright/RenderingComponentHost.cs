@@ -17,6 +17,9 @@ internal static class RenderingComponentHost
         var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { Args = [] });
         builder.WebHost.ConfigureKestrel(options =>
         {
+            // Ignore the app's Kestrel endpoints from appsettings.json (web and HTTPS device ports);
+            // the renderer only listens on its Unix socket.
+            options.Configure(new ConfigurationBuilder().Build(), reloadOnChange: false);
             options.Limits.MaxRequestBodySize = 8_000_000;
             options.ListenUnixSocket(SocketPath);
         });
